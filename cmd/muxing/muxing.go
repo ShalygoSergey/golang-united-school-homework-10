@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -21,10 +22,55 @@ main function reads host/port from env just for an example, flavor it following 
 func Start(host string, port int) {
 	router := mux.NewRouter()
 
+	router.HandleFunc("/name/{PARAM}", nameHandler).Methods("GET")
+	router.HandleFunc("/bad", badHandler).Methods("GET")
+	router.HandleFunc("/data", dataHandler).Methods("POST")
+	router.HandleFunc("/headers", headersHandler).Methods("POST")
+
 	log.Println(fmt.Printf("Starting API server on %s:%d\n", host, port))
 	if err := http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), router); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func nameHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	param := vars["PARAM"]
+	response := fmt.Sprintf("Hello, %s!", param)
+	_, err := fmt.Fprint(w, response)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func badHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(500)
+}
+
+func dataHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	response := fmt.Sprintf("I got message:\n%s", string(body))
+	_, err = fmt.Fprint(w, response)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func headersHandler(w http.ResponseWriter, r *http.Request) {
+	a, err := strconv.Atoi(r.Header.Get("a"))
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := strconv.Atoi(r.Header.Get("b"))
+	if err != nil {
+		panic(err)
+	}
+
+	w.Header().Add("a+b", fmt.Sprint(a+b))
 }
 
 //main /** starts program, gets HOST:PORT param and calls Start func.
